@@ -31,13 +31,13 @@ public class ProspectController {
 
     @GetMapping("all")
     public ResponseEntity<Map<String, Object>> getAllProspects(
-            @RequestParam(defaultValue = "0") int page, 
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(name = "page", defaultValue = "0") int page, 
+            @RequestParam(name = "size", defaultValue = "10") int size) {
         Map<String, Object> response = new HashMap<>();
         try {
             Page<Prospect> prospects = prospectService.findAllProspects(PageRequest.of(page, size));
             response.put("data", prospects);
-            response.put("message", "Prospectos obtenidos con éxito.");
+            response.put("message", "Prospectos obtenidos con éxito.");
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (Exception e) {
             response.put("message", "Error al obtener la lista de prospectos: " + e.getMessage());
