@@ -2,8 +2,11 @@ package com.prospectsApi.Service;
 
 import com.prospectsApi.Exception.ProspectNotFoundException;
 import com.prospectsApi.Model.Prospect;
+import com.prospectsApi.Model.ProspectFile;
+import com.prospectsApi.Model.ProspectLog;
 import com.prospectsApi.Repository.ProspectRepository;
-
+import com.prospectsApi.Repository.ProspectFileRepository;
+import com.prospectsApi.Repository.ProspectLogRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -18,23 +21,30 @@ import java.util.List;
 @Service
 public class ProspectService {
     private final ProspectRepository prospectRepository;
-
+    private final ProspectFileRepository prospectFileRepository;
+    private final ProspectLogRepository prospectLogRepository;
     @Autowired
-    public ProspectService(ProspectRepository prospectRepository) {
+    public ProspectService(
+        ProspectRepository prospectRepository,
+        ProspectFileRepository prospectFileRepository,
+        ProspectLogRepository prospectLogRepository
+        ) {
         this.prospectRepository = prospectRepository;
+        this.prospectFileRepository = prospectFileRepository;
+        this.prospectLogRepository = prospectLogRepository;
     }
 
     public Prospect saveProspect(Prospect prospect, List<MultipartFile> files) throws IOException {
         Prospect savedProspect = prospectRepository.save(prospect);
 
         if (files != null) {
-            storeFiles(files);
+            storeFiles(files, savedProspect);
         }
 
         return savedProspect;
     }
 
-    private void storeFiles(List<MultipartFile> files) throws IOException {
+    private void storeFiles(List<MultipartFile> files, Prospect savedProspect) throws IOException {
         String uploadDirectory = System.getProperty("user.dir") + "/data/files/";
         File uploadDir = new File(uploadDirectory);
         if (!uploadDir.exists()) {
@@ -44,9 +54,17 @@ public class ProspectService {
         for (MultipartFile file : files) {
             String fileName = file.getOriginalFilename();
             String filePath = uploadDirectory + file.getOriginalFilename();
+            String path = "/data/files/" + fileName;
             File destinationFile = new File(filePath);
             file.transferTo(destinationFile);
-            System.out.println("File uploaded: " + destinationFile.getPath());
+            // System.out.println("File uploaded: " + destinationFile.getPath());
+            ProspectFile prospectFile = new ProspectFile();
+            prospectFile.setIdProspect(savedProspect.getIdProspect());
+            prospectFile.setName(fileName);
+            prospectFile.setPath(path);
+            prospectFile.setMimetype(file.getContentType());
+            prospectFile.setStatus("1");
+            prospectFileRepository.save(prospectFile);
         }
     }
     public Page<Prospect> findAllProspects(Pageable pageable) {
@@ -81,8 +99,25 @@ public class ProspectService {
             .orElseThrow(()->new ProspectNotFoundException("Prospecto con ID: " + id + " no encontrado"));
     }
 
+    public List<ProspectFile> findFilesByProspectId(Long idProspect) {
+        return prospectFileRepository.findByIdProspect(idProspect);
+    }
+    
     public void deleteProspect(Long id) {
         prospectRepository.deleteById(id);
+    }
+
+    public ProspectFile findFileById(Long idProspectFile) {
+        return prospectFileRepository.findById(idProspectFile)
+            .orElseThrow(() -> new ProspectNotFoundException("Archivo con ID: " + idProspectFile + " no encontrado"));
+    }    
+
+    public ProspectLog saveProspectLog(ProspectLog prospectLog) throws IOException {
+        return prospectLogRepository.save(prospectLog);
+    }
+
+    public List<ProspectLog> getProspectLogsById(Long idProspect) {
+        return prospectLogRepository.findByIdProspect(idProspect);
     }
 
 }
